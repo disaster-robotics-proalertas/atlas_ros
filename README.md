@@ -28,7 +28,7 @@ Currently, the sensor modules are mounted on a prototype board along with the Se
 ![](rpi-protoboard-wiring.png)
 
 * To configure RPi's UART communication, see [Atlas' guide in UART communication](https://www.atlas-scientific.com/_files/code/pi_sample_code.pdf).
-* To install ROS in your RPi, see [ROS Raspberry Pi install instructions](http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Kinetic%20on%20the%20Raspberry%20Pi) (install the "ros_full" version).
+* To install ROS in your RPi, see [ROS Raspberry Pi install instructions](http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Kinetic%20on%20the%20Raspberry%20Pi) (install the "Desktop" version).
 
 The ROS package contains one node, __sensors.py__, which communicates with the Serial Expander, switches the expander's ports, and reads the sensors one at a time, publishing their data in custom message ROS topics.
 To run the node, first run a ROS core, and then use the __rosrun__ command:
