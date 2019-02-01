@@ -1,6 +1,6 @@
 # atlas-ros
 
-ROS node for [Atlas Scientific's water quality sensor kit](https://www.atlas-scientific.com/product_pages/kits/env-sds-kit.html). Tested and working in [ROS Kinetic]().
+ROS node for [Atlas Scientific's water quality sensor kit](https://www.atlas-scientific.com/product_pages/kits/env-sds-kit.html). Tested and working in [ROS Kinetic](http://wiki.ros.org/kinetic).
 
 ## Installation
 
