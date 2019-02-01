@@ -9,7 +9,7 @@ After [installing ROS](http://wiki.ros.org/kinetic/Installation) and [building t
 ```
     cd ~/catkin_ws/src
     git clone https://github.com/disaster-robotics-proalertas/atlas-ros
-    catkin_make clean && catkin_make install
+    cd .. && catkin_make clean && catkin_make install
 ```
 
 If using a Raspberry Pi with Raspbian and ROS installed (following [this guide](http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Kinetic%20on%20the%20Raspberry%20Pi), see __Usage__ section below), installing the package is recommended with the "catkin_make_isolated" command. Log into the Raspberry with [SSH](https://www.openssh.com/) and enter the following:
