@@ -57,6 +57,16 @@ If using the RPi setup described above, it is highly recommended to set the RPi 
 This allows for other computers to seamlessly access the RPi's topics, parameters and node information.
 To do this, follow [this](http://wiki.ros.org/ROS/NetworkSetup) tutorial, changing the __ROS_MASTER_URI__ and __ROS_HOSTNAME__ appropriately on the RPi and other computers in the ROS network.
 
+### GPS dependency
+
+By default, the data from the sensors are published with a __GPS Time__ (GPST) information, and thus the __sensors.py__ node requires a GPST source, typically provided in ROS with the [TimeReference](http://docs.ros.org/jade/api/sensor_msgs/html/msg/TimeReference.html) message. This message usually comes from GPS sensors (e.g., with the [nmea_navsat_driver](http://wiki.ros.org/nmea_navsat_driver) package) in the ROS network, although it can be artificially published (for testing purposes) as:
+
+```
+    rostopic pub -r 1 /time_reference sensor_msgs/TimeReference '{time_ref: 1, source: gps}'
+```
+
+__Future work__: Add a parameter to switch this dependency on and off
+
 ## Contributors
 
 * [Renan Maidana](https://github.com/rgmaidana)
