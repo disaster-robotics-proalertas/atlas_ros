@@ -43,13 +43,19 @@ The package contains a launch file as well, where several parameters of the node
 * Sensor topic names
 * Sensor expander ports (i.e., the Serial Expander port to which the sensors are connected)
 
-To run the launch file, use the __roslaunch__ command (a core will be automatically run if none is active):
+To use the launch file, in your RPi, copy "__sensors.launch__" from the "launch" folder to ROS' package install directory:
+
+```
+    sudo cp ~/ros_catkin_ws/src/atlas_ros/launch/sensors.launch /opt/ros/kinetic/share/atlas_ros/launch
+```
+
+To run, use the __roslaunch__ command (a core will be automatically run if none is active):
 
 ```
     roslaunch atlas_ros sensors.launch
 ```
 
-This file also automatically starts a [ROSBAG](http://wiki.ros.org/rosbag) recording of all topics. To disable this, comment the rosbag node line from the launch file.
+This file also automatically starts a [ROSBAG](http://wiki.ros.org/rosbag) recording of all topics. To disable this, comment the rosbag node line from the launch file in "/opt/ros/kinetic/share/atlas_ros/launch/sensors.launch".
 
 ### ROS Network setup
 
