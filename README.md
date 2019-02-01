@@ -76,5 +76,5 @@ __Future work__: Add a parameter to switch this dependency on and off
 ## Contributors
 
 * [Renan Maidana](https://github.com/rgmaidana)
-* [Guilherme Heck](https://dblp.uni-trier.de/pers/hd/h/Heck:Guilherme)
+* [Guilherme Heck](https://github.com/heckgui)
 * [Alexandre Amory](https://github.com/amamory)
