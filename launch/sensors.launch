@@ -1,0 +1,35 @@
+<!-- Launch file for Atlas water quality monitoring sensors
+This file launches a single ROS node which communicates to a Serial Expander via UART, and reads data from 5 sensors:
+    - Electrical Conductivity (Conductivity, PPM, Water salinity and specific gravity)
+    - Acidity or Alkalinity (pH)
+    - Oxidation/Reduction Potential (Oxi-Redox Potential)
+    - Temperature (Celsius and Fahrenheit)
+    - Dissolved Oxygen
+Typical operation for this launch file is to run the node and rosbag recording. To disable rosbag, comment the command below.
+To switch the sensors around different ports in the Serial Extender, set the according parameters in the node below. -->
+
+<launch>
+    <!-- Sensors' node -->
+    <node name="atlas_ros" pkg="atlas_ros" type="sensors.py" output="screen">
+        <!-- Topic parameters -->
+        <param name="/atlas/Conductivity/topic" value="/atlas/raw/Conductivity"/>
+        <param name="/atlas/OxiRedoxPotential/topic" value="/atlas/raw/OxiRedoxPotential"/>
+        <param name="/atlas/pH/topic" value="/atlas/raw/pH"/>
+        <param name="/atlas/DissolvedOxygen/topic" value="/atlas/raw/DissolvedOxygen"/>
+        <param name="/atlas/Temperature/topic" value="/atlas/raw/Temperature"/>
+
+        <!-- Serial Expander port parameters -->
+        <param name="/atlas/Conductivity/SEPort" value="P1"/>
+        <param name="/atlas/OxiRedoxPotential/SEPort" value="P2"/>
+        <param name="/atlas/pH/SEPort" value="P3"/>
+        <param name="/atlas/DissolvedOxygen/SEPort" value="P4"/>
+        <param name="/atlas/Temperature/SEPort" value="P5"/>
+
+        <!-- Update rate -->
+        <param name="/atlas/rate" value="10" />
+    </node>
+
+    <!-- ROSBAG -->
+    <arg name="output" default="atlas_ros" />
+    <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/pi/$(arg output)" />
+</launch>
