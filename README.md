@@ -71,7 +71,7 @@ By default, the data from the sensors are published with a __GPS Time__ (GPST) i
     rostopic pub -r 1 /time_reference sensor_msgs/TimeReference '{time_ref: 1, source: gps}'
 ```
 
-__Future work__: Add a parameter to switch this dependency on and off
+__Future work__: Create ROS node to synchronize the raspberry ROSCORE (or system walltime) with GPST, then add parameter on this node to wait for this synchronism to happen before publishing data
 
 ## Contributors
 
