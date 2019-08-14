@@ -5,7 +5,7 @@ import rosparam
 import signal
 import sys
 
-from atlas_sensors.msg import Ph, Conductivity, DissolvedOxygen, Temperature, OxiRedoxPotential
+from atlas_ros.msg import Ph, Conductivity, DissolvedOxygen, Temperature, OxiRedoxPotential
 from sensor_msgs.msg import TimeReference
 
 from SerialExpander import SerialExpander
@@ -26,7 +26,7 @@ def handle_sigint(sig, frame):
 	"""
 	Handles SIGINT signal (CTRL+C interruption)
 	"""
-	rospy.loginfo("[atlas_sensors] Shutting down")
+	rospy.loginfo("[atlas_node] Shutting down")
 	rospy.signal_shutdown('SIGINT received (CTRL+C)')
 	expander.disconnect()
 	sys.exit(0)
