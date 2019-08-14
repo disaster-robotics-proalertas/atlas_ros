@@ -55,10 +55,10 @@ def node():
 	rospy.loginfo("[atlas_node] Success")
 
 	# Wait for GPST
-	rospy.loginfo("[atlas_node] Waiting for GPS time...")
+	# rospy.loginfo("[atlas_node] Waiting for GPS time...")
 	# gpst_topic = get_param('/atlas/gpst/topic', '/time_reference')
 	# rospy.wait_for_message(gpst_topic, TimeReference)
-	rospy.loginfo("[atlas_node] Done")
+	# rospy.loginfo("[atlas_node] Done")
 
 	# Topic info
 	rospy.loginfo("[atlas_node] Publishing pH information in %s topic" % phTopic)
