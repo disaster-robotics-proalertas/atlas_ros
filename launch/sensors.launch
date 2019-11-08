@@ -28,8 +28,4 @@ To switch the sensors around different ports in the Serial Extender, set the acc
         <!-- Update rate -->
         <param name="/atlas/rate" value="10" />
     </node>
-
-    <!-- ROSBAG -->
-    <arg name="output" default="atlas_ros" />
-    <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/pi/$(arg output)" />
 </launch>
