@@ -10,7 +10,7 @@ To switch the sensors around different ports in the Serial Extender, set the acc
 
 <launch>
     <!-- Sensors' node -->
-    <node name="atlas_ros" pkg="atlas_ros" type="sensors.py" output="screen">
+    <node name="atlas_ros" pkg="atlas_ros" type="serial_sensors.py" output="screen">
         <!-- Topic parameters -->
         <param name="/atlas/Conductivity/topic" value="/atlas/raw/Conductivity"/>
         <param name="/atlas/OxiRedoxPotential/topic" value="/atlas/raw/OxiRedoxPotential"/>
@@ -28,8 +28,4 @@ To switch the sensors around different ports in the Serial Extender, set the acc
         <!-- Update rate -->
         <param name="/atlas/rate" value="10" />
     </node>
-
-    <!-- ROSBAG -->
-    <arg name="output" default="atlas_ros" />
-    <node pkg="rosbag" type="record" name="record" output="screen" args="-a -o /home/pi/$(arg output)" />
 </launch>
