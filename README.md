@@ -9,7 +9,9 @@ After [installing ROS](http://wiki.ros.org/kinetic/Installation) and [building t
 ```
     cd ~/catkin_ws/src
     git clone https://github.com/disaster-robotics-proalertas/atlas-ros
-    cd .. && catkin_make clean && catkin_make install
+    cd atlas-ros
+    git checkout i2c
+    cd ../.. && catkin_make clean && catkin_make install
 ```
 
 If using a Raspberry Pi with Raspbian and ROS installed (following [this guide](http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Kinetic%20on%20the%20Raspberry%20Pi), see __Usage__ section below), installing the package is recommended with the "catkin_make_isolated" command. Log into the Raspberry with [SSH](https://www.openssh.com/) and enter the following:
@@ -23,14 +25,14 @@ The __sudo__ authentication is necessary to write the install files to "/opt/ros
 
 ## Usage
 
-Currently, the sensor modules are mounted on a prototype board along with the Serial Expander, which communicates to a [Raspberry Pi Zero](https://www.raspberrypi.org/products/raspberry-pi-zero/) (RPi) with [Raspbian Stretch](https://www.raspberrypi.org/blog/raspbian-stretch/) and ROS Kinetic Desktop Full. Although the package should work with any computer with a UART interface, setting up the sensors along with the RPi is strongly recommended. The wiring for this particular case can be seen [below](./rpi-protoboard-wiring.png) (the Raspberry Pi 2 and Zero share the same GPIO pinout).
+Currently, the sensor modules are mounted on a prototype board which communicates to a [Raspberry Pi Zero](https://www.raspberrypi.org/products/raspberry-pi-zero/) (RPi) with [Raspbian Stretch](https://www.raspberrypi.org/blog/raspbian-stretch/) and ROS Kinetic Desktop Full. Although the package should work with any computer with a I2C interface, setting up the sensors along with the RPi is strongly recommended. The wiring for this particular case can be seen [below](./rpi-protoboard-wiring.png) (the Raspberry Pi 2 and Zero share the same GPIO pinout).
 
 ![](rpi-protoboard-wiring.png)
 
-* To configure RPi's UART communication, see [Atlas' guide in UART communication](https://www.atlas-scientific.com/_files/code/pi_sample_code.pdf).
+* To configure RPi's I2C communication, see [Atlas' guide in I2C communication](https://www.atlas-scientific.com/_files/code/pi_sample_code.pdf).
 * To install ROS in your RPi, see [ROS Raspberry Pi install instructions](http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Kinetic%20on%20the%20Raspberry%20Pi) (install the "Desktop" version).
 
-The ROS package contains one node, __sensors.py__, which communicates with the Serial Expander, switches the expander's ports, and reads the sensors one at a time, publishing their data in custom message ROS topics.
+The ROS package contains one node, __sensors.py__, which communicates with the Atlas circuits, switches the I2C adresses, and reads the sensors one at a time, publishing their data in custom message ROS topics.
 To run the node, first run a ROS core, and then use the __rosrun__ command:
 
 ```
@@ -78,3 +80,4 @@ __Future work__: Create ROS node to synchronize the raspberry ROSCORE (or system
 * [Renan Maidana](https://github.com/rgmaidana)
 * [Guilherme Heck](https://github.com/heckgui)
 * [Alexandre Amory](https://github.com/amamory)
+* [Igor Souza](https://github.com/igorSouzaA)
