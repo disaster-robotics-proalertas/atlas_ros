@@ -166,8 +166,8 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
  install(PROGRAMS
-#   scripts/sensors.py
-#   scripts/SerialExpander.py
+   scripts/serial_sensors.py
+   scripts/SerialExpander.py
    scripts/i2c_sensors.py
    scripts/I2Cbus.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -189,7 +189,8 @@ include_directories(
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 install(FILES
-  launch/sensors.launch
+  launch/serial_sensors.launch
+  launch/i2c_sensors.launch
 #   # myfile2
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
