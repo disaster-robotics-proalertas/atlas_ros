@@ -8,10 +8,10 @@ import sys
 from atlas_ros.msg import Ph, Conductivity, DissolvedOxygen, Temperature, OxiRedoxPotential
 from sensor_msgs.msg import TimeReference
 
-from SerialExpander import SerialExpander
+from I2Cbus import I2Cbus
 
-# Serial expander global instance
-expander = SerialExpander()
+# I2C bus global instance
+bus = I2Cbus()
 
 # Custom function to get parameters with default values
 # For some reason, this version of rosparam is behaving
@@ -28,7 +28,6 @@ def handle_sigint(sig, frame):
 	"""
 	rospy.loginfo("[atlas_node] Shutting down")
 	rospy.signal_shutdown('SIGINT received (CTRL+C)')
-	expander.disconnect()
 	sys.exit(0)
 
 def node():
@@ -48,11 +47,6 @@ def node():
 	doPub = rospy.Publisher(doTopic, DissolvedOxygen, queue_size=10)
 	ecPub = rospy.Publisher(ecTopic, Conductivity, queue_size=10)
 	tempPub = rospy.Publisher(tempTopic, Temperature, queue_size=10)
-
-	# Connect to serial expander
-	rospy.loginfo("[atlas_node] Connecting to Serial Expander...")
-	expander.connect()
-	rospy.loginfo("[atlas_node] Success")
 
 	# Wait for GPST
 	rospy.loginfo("[atlas_node] Waiting for GPS time...")
@@ -88,13 +82,13 @@ def node():
 	while not rospy.is_shutdown():
 		##### Get data from Conductivity sensor and publish it
 		# Get port from ec port parameter
-		port = get_param('/atlas/Conductivity/SEPort', 'P1')
+		address = get_param('/atlas/Conductivity/SEPort', '1')
 
 		# Get EC sensor data and publish it
 		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
 		ec_msg.gpst = gpst_msg.time_ref
 		ec_msg.header.stamp = rospy.Time.now()
-		data = expander.get_data(port).strip('\r').split(',')
+		data = bus.get_data(address).split(',')
 		ec_msg.ec = float(data[0])
 		ec_msg.ppm = int(data[1])
 		ec_msg.salinity = float(data[2])
@@ -103,46 +97,46 @@ def node():
 
 		##### Get data from RedoxPotential sensor and publish it
 		# Get port from redox port parameter
-		port = get_param('/atlas/RedoxPotential/SEPort', 'P2')
+		address = get_param('/atlas/RedoxPotential/SEPort', '2')
 
 		# Get Redox Potential sensor data and publish it
 		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
 		orp_msg.gpst = gpst_msg.time_ref
 		orp_msg.header.stamp = rospy.Time.now()
-		orp_msg.orp = float(expander.get_data(port).strip('\r'))
+		orp_msg.orp = float(bus.get_data(address))
 		orpPub.publish(orp_msg)
 
 		##### Get data from pH sensor and publish it
 		# Get port from ph port parameter
-		port = get_param('/atlas/pH/SEPort', 'P3')
+		address = get_param('/atlas/pH/SEPort', '3')
 
 		# Get ph sensor data and publish it
 		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
 		pH_msg.gpst = gpst_msg.time_ref
 		pH_msg.header.stamp = rospy.Time.now()
-		pH_msg.pH = float(expander.get_data(port).strip('\r'))
+		pH_msg.pH = float(bus.get_data(address))
 		phPub.publish(pH_msg)
 
 		##### Get data from DissolvedOxygen sensor and publish it
 		# Get port from ec port parameter
-		port = get_param('/atlas/DissolvedOxygen/SEPort', 'P4')
+		address = get_param('/atlas/DissolvedOxygen/SEPort', '4')
 
 		# Get dissolved oxygen sensor data and publish it
 		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
 		do_msg.gpst = gpst_msg.time_ref
 		do_msg.header.stamp = rospy.Time.now()
-		do_msg.do = float(expander.get_data(port).strip('\r'))
+		do_msg.do = float(bus.get_data(address))
 		doPub.publish(do_msg)
 
 		##### Get data from Temperature sensor and publish it
 		# Get port from ec port parameter
-		port = get_param('/atlas/Temperature/SEPort', 'P5')
+		address = get_param('/atlas/Temperature/SEPort', '5')
 
 		# Get RTD sensor data and publish it
 		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
 		temp_msg.gpst = gpst_msg.time_ref
 		temp_msg.header.stamp = rospy.Time.now()
-		temp_msg.celsius = float(expander.get_data(port).strip('\r'))
+		temp_msg.celsius = float(bus.get_data(address))
 		temp_msg.fahrenheit = temp_msg.celsius*1.8 + 32.0	# Conversion to Fahrenheit
 		tempPub.publish(temp_msg)
 

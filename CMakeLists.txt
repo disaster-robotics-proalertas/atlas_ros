@@ -166,8 +166,10 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
  install(PROGRAMS
-   scripts/sensors.py
-   scripts/SerialExpander.py
+#   scripts/sensors.py
+#   scripts/SerialExpander.py
+   scripts/i2c_sensors.py
+   scripts/I2Cbus.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
