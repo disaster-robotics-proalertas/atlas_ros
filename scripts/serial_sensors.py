@@ -54,12 +54,6 @@ def node():
 	expander.connect()
 	rospy.loginfo("[atlas_node] Success")
 
-	# Wait for GPST
-	rospy.loginfo("[atlas_node] Waiting for GPS time...")
-	gpst_topic = get_param('/atlas/gpst/topic', '/time_reference')
-	rospy.wait_for_message(gpst_topic, TimeReference)
-	rospy.loginfo("[atlas_node] Done")
-
 	# Topic info
 	rospy.loginfo("[atlas_node] Publishing pH information in %s topic" % phTopic)
 	rospy.loginfo("[atlas_node] Publishing Redox Potential information in %s topic" % orpTopic)
@@ -91,8 +85,6 @@ def node():
 		port = get_param('/atlas/Conductivity/SEPort', 'P1')
 
 		# Get EC sensor data and publish it
-		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
-		ec_msg.gpst = gpst_msg.time_ref
 		ec_msg.header.stamp = rospy.Time.now()
 		data = expander.get_data(port).strip('\r').split(',')
 		ec_msg.ec = float(data[0])
@@ -106,8 +98,6 @@ def node():
 		port = get_param('/atlas/RedoxPotential/SEPort', 'P2')
 
 		# Get Redox Potential sensor data and publish it
-		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
-		orp_msg.gpst = gpst_msg.time_ref
 		orp_msg.header.stamp = rospy.Time.now()
 		orp_msg.orp = float(expander.get_data(port).strip('\r'))
 		orpPub.publish(orp_msg)
@@ -117,8 +107,6 @@ def node():
 		port = get_param('/atlas/pH/SEPort', 'P3')
 
 		# Get ph sensor data and publish it
-		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
-		pH_msg.gpst = gpst_msg.time_ref
 		pH_msg.header.stamp = rospy.Time.now()
 		pH_msg.pH = float(expander.get_data(port).strip('\r'))
 		phPub.publish(pH_msg)
@@ -128,8 +116,6 @@ def node():
 		port = get_param('/atlas/DissolvedOxygen/SEPort', 'P4')
 
 		# Get dissolved oxygen sensor data and publish it
-		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
-		do_msg.gpst = gpst_msg.time_ref
 		do_msg.header.stamp = rospy.Time.now()
 		do_msg.do = float(expander.get_data(port).strip('\r'))
 		doPub.publish(do_msg)
@@ -139,8 +125,6 @@ def node():
 		port = get_param('/atlas/Temperature/SEPort', 'P5')
 
 		# Get RTD sensor data and publish it
-		gpst_msg = rospy.wait_for_message(gpst_topic, TimeReference)
-		temp_msg.gpst = gpst_msg.time_ref
 		temp_msg.header.stamp = rospy.Time.now()
 		temp_msg.celsius = float(expander.get_data(port).strip('\r'))
 		temp_msg.fahrenheit = temp_msg.celsius*1.8 + 32.0	# Conversion to Fahrenheit
