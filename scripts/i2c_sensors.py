@@ -277,6 +277,7 @@ class Node:
 			self.do_msg.header.stamp = rospy.Time.now()
 			data = self.bus.get_data(self.do_address)
 			self.do_msg.do = data[0]
+			self.do_msg.saturation = data[1]
 			self.doPub.publish(self.do_msg)
 
 			# Get RTD sensor data and publish it
