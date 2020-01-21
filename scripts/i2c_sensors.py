@@ -79,6 +79,10 @@ class Node:
 		hz = self.get_param('/atlas/rate', "10")
 		self.rate = rospy.Rate(int(hz))
 
+		# Send command to enable percent saturation in DO sensor
+		self.bus.send_cmd('O,%,1', self.do_address)
+
+		# Flag to indicate an ongoing calibration procedure
 		self.calib = False
 
 	# Custom function to get parameters with default values
