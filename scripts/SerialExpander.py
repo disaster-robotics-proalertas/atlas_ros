@@ -42,13 +42,12 @@ class SerialExpander:
 
 		# Turn off ACK messages and continuous reading for all devices
 		for port in self.expanderAddr:
-			self.select_SE_port(port)
 			self.ser.flush()
-			self.send_cmd("*OK,0")	# Disable OK messages
-			time.sleep(0.01)		# Wait 10 ms before next instruction
+			self.send_cmd("*OK,0", port)	# Disable OK messages
+			time.sleep(0.01)				# Wait 10 ms before next instruction
 			self.ser.flush()
-			self.send_cmd("C,0")	# Disable continuous reading mode
-			time.sleep(0.01)		# Wait 10 ms before next instruction
+			self.send_cmd("C,0", port)		# Disable continuous reading mode
+			time.sleep(0.01)				# Wait 10 ms before next instruction
 
 		# Return to default port "0,0,0" (or "P1")
 		self.select_SE_port("P1")
@@ -117,16 +116,19 @@ class SerialExpander:
 			print( "Error, ", e)
 			return None	
 
-	def send_cmd(self, cmd):
+	def send_cmd(self, cmd, port):
 		"""
 		Send command to the Atlas Sensor.
 		Before sending, add Carriage Return at the end of the command.
+		:param port:
 		:param cmd:
 		:return:
 		"""
+		self.select_SE_port(port)
 		buf = cmd + "\r"     	# add carriage return
 		try:
 			self.ser.write(buf.encode('utf-8'))
+			time.sleep(1)			# Wait 1s for the data to arrive
 			return True
 		except SerialException as e:
 			print ("Error, ", e)
@@ -136,14 +138,11 @@ class SerialExpander:
 		"""
 		Gets a single reading from sensor in selected port
 		"""
-		self.select_SE_port(port)
-		
 		# Clear previous data
 		self.ser.flush()
 
 		# Send request for data
-		self.send_cmd("R")
-		time.sleep(1)			# Wait 1s for the data to arrive
+		self.send_cmd("R", port)
 		lines = self.read_lines()
 		
 		return lines[0]

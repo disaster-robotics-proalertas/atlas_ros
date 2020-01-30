@@ -71,6 +71,9 @@ class Node:
 		self.orp_msg = OxiRedoxPotential()
 		self.orp_msg.header.frame_id = 'atlaspi'
 
+		# Send command to enable percent saturation in DO sensor
+		self.expander.send_cmd('O,%,1', self.do_address)
+
 		# Rate (defined by parameter)
 		hz = self.get_param('/atlas/rate', "10")
 		self.rate = rospy.Rate(int(hz))
