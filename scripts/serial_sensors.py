@@ -130,14 +130,37 @@ class Node:
 
 	# ROS service to calibrate EC sensor
 	def calibrate_EC_sensor(self, req):
+		# Wait a bit for other readings to finish
 		rospy.loginfo("[atlas_node] Conductivity sensor calibration")
 		try:
-			self.expander.select_SE_port(self.ec_address)
-			if req.type.lower() == 'dry':
-				rospy.loginfo("[atlas_node] Dry calibration: Remove the cap from your sensor probe.\n\
-							Place your sensor probe in dry air, in a downward position.\n\
-							Wait until the EC readings stabilize. The procedure will complete automatically.")
-				self.expander.send_cmd('Cal,dry')
+			self.calib = True
+			rospy.sleep(10.0)
+			if req.type.lower() == 'clear':
+				rospy.loginfo("[atlas_node] Clearing calibration data")
+				self.expander.send_cmd('Cal,clear', self.ec_address)
+				self.calib = False
+				return CalibrateECResponse("[atlas_node] Calibration completed successfully.")
+			elif req.type.lower() == 'dry':
+				rospy.loginfo("[atlas_node] Dry calibration: Remove the cap from your sensor probe.\nPlace your sensor probe in dry air, in a downward position.\nWait until the EC readings stabilize. The procedure will complete automatically.")
+				self.expander.send_cmd('Cal,dry', self.ec_address)
+				# Keep running calibration until values are stable within a certain tolerance from 0
+				current, mean, t1 = 0, 99999999, rospy.Time.now().to_sec()
+				while sqrt((mean)**2) > 0.05:
+					mean, i = 0, 0
+					while i < 10:
+						try:
+							data = self.expander.get_data(self.ec_address).strip('\r').split(',')
+							current = float(data[0])
+							mean += current
+							rospy.loginfo("[atlas_node] Current measurement: %f" % current)
+							i += 1
+							if (rospy.Time.now().to_sec() - t1) > 300:
+								raise TimeoutError
+						except ValueError:
+							pass
+					mean /= i
+				self.calib = False
+				return CalibrateECResponse("[atlas_node] Calibration completed successfully.")
 			elif req.type.lower() == 'low':
 				rospy.loginfo("[atlas_node] Low point calibration: Remove the cap from your sensor probe.\n\
 							Place your sensor probe in the low point solution, in a downward position.\n\
@@ -149,31 +172,43 @@ class Node:
 							Shake the probe to release any air bubbles from the sensing area.\n\
 							Wait until the EC readings stabilize. The procedure will complete automatically.")
 
-			# Keep running calibration until values are stable within a certain tolerance (0.05)
+			# Keep running calibration until values are stable within a certain tolerance (0.1% of mean)
 			current, mean, t1 = 0, 99999999, rospy.Time.now().to_sec()
-			while sqrt((current - mean)**2) > 0.05:
-				mean = 0
-				for _ in range(10):
-					data = self.expander.get_data(self.ec_address).strip('\r').split(',')
-					current = float(data[0])
-					mean += current
-					rospy.loginfo("[atlas_node] Current: %f" % current)
-				mean /= 10
-				if (rospy.Time.now().to_sec() - t1) > 300:
-					raise TimeoutError
+			while sqrt((current - mean)**2) > mean*0.001:
+				mean, i = 0, 0
+				while i < 10:
+					try:
+						data = self.expander.get_data(self.ec_address).strip('\r').split(',')
+						current = float(data[0])
+						mean += current
+						rospy.loginfo("[atlas_node] Current measurement: %f" % current)
+						i += 1
+						if (rospy.Time.now().to_sec() - t1) > 300:
+							raise TimeoutError
+					except ValueError:
+						pass
+				mean /= i
 			
 			if not req.type.lower() == 'dry':
-				self.expander.send_cmd('Cal,%s,%d' % (req.type, req.point))
+				self.expander.send_cmd('Cal,%s,%d' % (req.type, req.point), self.ec_address)
 
+			self.calib = False
 			return CalibrateECResponse("[atlas_node] Calibration completed successfully.")
 		except:
+			self.calib = False
 			return CalibrateECResponse("[atlas_node] Calibration failed!")
 	
 	# ROS service to calibrate pH sensor
 	def calibrate_PH_sensor(self, req):
 		rospy.loginfo("[atlas_node] pH sensor calibration")
 		try:
-			self.expander.select_SE_port(self.ph_address)
+			self.calib = True
+			rospy.sleep(10.0)
+			if req.type.lower() == 'clear':
+				rospy.loginfo("[atlas_node] Clearing calibration data")
+				self.expander.send_cmd('Cal,clear', self.ph_address)
+				self.calib = False
+				return CalibratePHResponse("[atlas_node] Calibration completed successfully.")
 			if req.type.lower() == 'mid':
 				rospy.loginfo("[atlas_node] Mid point calibration: Remove the storage solution from the sensor probe and rinse the tip with clean water.\n\
 							Place your sensor probe in the pH 7 solution, in a downward position.\n\
@@ -190,131 +225,149 @@ class Node:
 							Wait until the pH readings stabilize. The procedure will complete automatically.\n\
 							!!!IMPORTANT!!!: Mid point calibration must be performed first.")
 
-			# Keep running calibration until values are stable within a certain tolerance (0.05)
+			# Keep running calibration until values are stable within a certain tolerance (0.1% of mean)
 			current, mean, t1 = 0, 99999999, rospy.Time.now().to_sec()
-			while sqrt((current - mean)**2) > 0.05:
-				mean = 0
-				for _ in range(10):
-					current = float(self.expander.get_data(self.ph_address).strip('\r'))
-					mean += current
-					rospy.loginfo("[atlas_node] Current: %f" % current)
-				mean /= 10
-				if (rospy.Time.now().to_sec() - t1) > 300:
-					raise TimeoutError
+			while sqrt((current - mean)**2) > mean*0.001:
+				mean, i = 0, 0
+				while i < 10:
+					try:
+						current = self.expander.get_data(self.ph_address).strip('\r')
+						mean += float(current)
+						rospy.loginfo("[atlas_node] Current: %f" % current)
+						i += 1
+						if (rospy.Time.now().to_sec() - t1) > 300:
+							raise TimeoutError
+					except ValueError:
+						pass
+				mean /= i
 			
-			self.expander.send_cmd('Cal,%s,%d' % (req.type, req.point))
-
+			self.expander.send_cmd('Cal,%s,%d' % (req.type, req.point), self.ph_address)
+			
+			self.calib = False
 			return CalibratePHResponse("[atlas_node] Calibration completed successfully.")
 		except:
+			self.calib = False
 			return CalibratePHResponse("[atlas_node] Calibration failed!")
 	
 	# ROS service to calibrate Dissolved Oxygen sensor
 	def calibrate_DO_sensor(self, req):
 		rospy.loginfo("[atlas_node] Dissolved Oxygen sensor calibration")
 		try:
-			self.expander.select_SE_port(self.do_address)
-			if req.point == 0:
+			self.calib = True
+			rospy.sleep(10.0)
+			if req.type.lower() == 'clear':
+				rospy.loginfo("[atlas_node] Clearing calibration data")
+				self.expander.send_cmd('Cal,clear', self.do_address)
+				self.expander.send_cmd("O,%,1", self.do_address)
+				self.calib = False
+				return CalibrateDOResponse("[atlas_node] Calibration completed successfully.")
+			elif req.type.lower() == 'dry':
+				rospy.loginfo("[atlas_node] Dry calibration: Remove the cap from your sensor probe.\nPlace your sensor probe in dry air, in a downward position.\nWait until the DO readings stabilize. The procedure will complete automatically.")
+			elif req.type.lower() == 'zero':
 				rospy.loginfo("[atlas_node] Zero-Concentration calibration: Remove the cap from your sensor probe.\n\
 								Place your sensor probe in the Zero-Concentration solution, in a downward position.\n\
 								Shake the sensor to remove any air bubbles from the sensing area.\n\
 								Wait until the DO readings stabilize. The procedure will complete automatically.")
-			else:
-				rospy.loginfo("[atlas_node] Dry calibration: Remove the cap from your sensor probe.\n\
-								Place your sensor probe in dry air, in a downward position.\n\
-								Wait until the DO readings stabilize. The procedure will complete automatically.")
 			
 
-			# Keep running calibration until values are stable within a certain tolerance (0.05)
+			# Keep running calibration until values are stable within a certain tolerance (0.1% of mean)
 			current, mean, t1 = 0, 99999999, rospy.Time.now().to_sec()
-			while sqrt((current - mean)**2) > 0.05:
-				mean = 0
-				for _ in range(10):
-					current = float(self.expander.get_data(self.do_address).strip('\r'))
-					mean += current
-					rospy.loginfo("[atlas_node] Current: %f" % current)
-				mean /= 10
-				if (rospy.Time.now().to_sec() - t1) > 300:
-					raise TimeoutError
+			while sqrt((current - mean)**2) > mean*0.001:
+				mean, i = 0, 0
+				while i < 10:
+					try:
+						current = self.expander.get_data(self.do_address).strip('\r')
+						mean += float(current)
+						rospy.loginfo("[atlas_node] Current: %f" % current)
+						i += 1
+						if (rospy.Time.now().to_sec() - t1) > 300:
+							raise TimeoutError
+					except ValueError:
+						pass
+				mean /= i
 			
-			if req.point == 0:
-				self.expander.send_cmd('Cal')
+			if req.type.lower() == 'zero':
+				self.expander.send_cmd('Cal,0', self.do_address)
 			else:
-				self.expander.send_cmd('Cal,0')
-
+				self.expander.send_cmd('Cal', self.do_address)
+			
+			self.calib = False
 			return CalibrateDOResponse("[atlas_node] Calibration completed successfully.")
 		except:
+			self.calib = False
 			return CalibrateDOResponse("[atlas_node] Calibration failed!")
 
 
 	def run(self):
-		# Get EC sensor data and publish it
-		self.ec_msg.header.stamp = rospy.Time.now()
-		data = self.expander.get_data(self.ec_address).strip('\r').split(',')
-		self.ec_msg.ec = float(data[0])
-		self.ec_msg.ppm = int(data[1])
-		self.ec_msg.salinity = float(data[2])
-		self.ec_msg.specificGrav = float(data[3])
-		self.ecPub.publish(self.ec_msg)
-		self.ecStatus.status.level = DiagnosticStatus.OK
-		self.ecStatus.status.message = 'OK'
-		self.ecStatus.status.values = [KeyValue(key='Conductivity', value=str(self.ec_msg.ec))]
-		self.ecStatus.last_update = rospy.Time.now()
+		if self.calib:
+			# Get EC sensor data and publish it
+			self.ec_msg.header.stamp = rospy.Time.now()
+			data = self.expander.get_data(self.ec_address).strip('\r').split(',')
+			self.ec_msg.ec = float(data[0])
+			self.ec_msg.ppm = int(data[1])
+			self.ec_msg.salinity = float(data[2])
+			self.ec_msg.specificGrav = float(data[3])
+			self.ecPub.publish(self.ec_msg)
+			self.ecStatus.status.level = DiagnosticStatus.OK
+			self.ecStatus.status.message = 'OK'
+			self.ecStatus.status.values = [KeyValue(key='Conductivity', value=str(self.ec_msg.ec))]
+			self.ecStatus.last_update = rospy.Time.now()
 
-		# Get Redox Potential sensor data and publish it
-		self.orp_msg.header.stamp = rospy.Time.now()
-		self.orp_msg.orp = float(self.expander.get_data(self.orp_address).strip('\r'))
-		self.orpPub.publish(self.orp_msg)
-		self.orpStatus.status.level = DiagnosticStatus.OK
-		self.orpStatus.status.message = 'OK'
-		self.orpStatus.status.values = [KeyValue(key='Oxi-Redox Potential', value=str(self.orp_msg.orp))]
-		self.orpStatus.last_update = rospy.Time.now()
+			# Get Redox Potential sensor data and publish it
+			self.orp_msg.header.stamp = rospy.Time.now()
+			self.orp_msg.orp = float(self.expander.get_data(self.orp_address).strip('\r'))
+			self.orpPub.publish(self.orp_msg)
+			self.orpStatus.status.level = DiagnosticStatus.OK
+			self.orpStatus.status.message = 'OK'
+			self.orpStatus.status.values = [KeyValue(key='Oxi-Redox Potential', value=str(self.orp_msg.orp))]
+			self.orpStatus.last_update = rospy.Time.now()
 
-		# Get ph sensor data and publish it
-		self.pH_msg.header.stamp = rospy.Time.now()
-		self.pH_msg.pH = float(self.expander.get_data(self.ph_address).strip('\r'))
-		self.phPub.publish(self.pH_msg)
-		self.pHStatus.status.level = DiagnosticStatus.OK
-		self.pHStatus.status.message = 'OK'
-		self.pHStatus.status.values = [KeyValue(key='pH', value=str(self.pH_msg.pH))]
-		self.pHStatus.last_update = rospy.Time.now()
+			# Get ph sensor data and publish it
+			self.pH_msg.header.stamp = rospy.Time.now()
+			self.pH_msg.pH = float(self.expander.get_data(self.ph_address).strip('\r'))
+			self.phPub.publish(self.pH_msg)
+			self.pHStatus.status.level = DiagnosticStatus.OK
+			self.pHStatus.status.message = 'OK'
+			self.pHStatus.status.values = [KeyValue(key='pH', value=str(self.pH_msg.pH))]
+			self.pHStatus.last_update = rospy.Time.now()
 
-		# Get dissolved oxygen sensor data and publish it
-		self.do_msg.header.stamp = rospy.Time.now()
-		self.do_msg.do = float(self.expander.get_data(self.do_address).strip('\r'))
-		self.doPub.publish(self.do_msg)
-		self.doStatus.status.level = DiagnosticStatus.OK
-		self.doStatus.status.message = 'OK'
-		self.doStatus.status.values = [KeyValue(key='Dissolved Oxygen Saturation', value=str(self.do_msg.saturation))]
-		self.doStatus.last_update = rospy.Time.now()
+			# Get dissolved oxygen sensor data and publish it
+			self.do_msg.header.stamp = rospy.Time.now()
+			self.do_msg.do = float(self.expander.get_data(self.do_address).strip('\r'))
+			self.doPub.publish(self.do_msg)
+			self.doStatus.status.level = DiagnosticStatus.OK
+			self.doStatus.status.message = 'OK'
+			self.doStatus.status.values = [KeyValue(key='Dissolved Oxygen Saturation', value=str(self.do_msg.saturation))]
+			self.doStatus.last_update = rospy.Time.now()
 
-		# Get RTD sensor data and publish it
-		self.temp_msg.header.stamp = rospy.Time.now()
-		self.temp_msg.celsius = float(self.expander.get_data(self.temp_address).strip('\r'))
-		self.temp_msg.fahrenheit = self.temp_msg.celsius*1.8 + 32.0	# Conversion to Fahrenheit
-		self.tempPub.publish(self.temp_msg)
-		self.tempStatus.status.level = DiagnosticStatus.OK
-		self.tempStatus.status.message = 'OK'
-		self.tempStatus.status.values = [KeyValue(key='Temperature (deg C)', value=str(self.temp_msg.celsius))]
-		self.tempStatus.last_update = rospy.Time.now()
+			# Get RTD sensor data and publish it
+			self.temp_msg.header.stamp = rospy.Time.now()
+			self.temp_msg.celsius = float(self.expander.get_data(self.temp_address).strip('\r'))
+			self.temp_msg.fahrenheit = self.temp_msg.celsius*1.8 + 32.0	# Conversion to Fahrenheit
+			self.tempPub.publish(self.temp_msg)
+			self.tempStatus.status.level = DiagnosticStatus.OK
+			self.tempStatus.status.message = 'OK'
+			self.tempStatus.status.values = [KeyValue(key='Temperature (deg C)', value=str(self.temp_msg.celsius))]
+			self.tempStatus.last_update = rospy.Time.now()
 
-	# Check for stale status
-	self.ecStatus.check_stale(rospy.Time.now(), 35)
-	self.orpStatus.check_stale(rospy.Time.now(), 35)
-	self.pHStatus.check_stale(rospy.Time.now(), 35)
-	self.doStatus.check_stale(rospy.Time.now(), 35)
-	self.tempStatus.check_stale(rospy.Time.now(), 35)
+		# Check for stale status
+		self.ecStatus.check_stale(rospy.Time.now(), 35)
+		self.orpStatus.check_stale(rospy.Time.now(), 35)
+		self.pHStatus.check_stale(rospy.Time.now(), 35)
+		self.doStatus.check_stale(rospy.Time.now(), 35)
+		self.tempStatus.check_stale(rospy.Time.now(), 35)
 
-	# Publish diagnostics message
-	diag_msg = DiagnosticArray()
-	diag_msg.status.append(self.ecStatus.status)
-	diag_msg.status.append(self.orpStatus.status)
-	diag_msg.status.append(self.pHStatus.status)
-	diag_msg.status.append(self.doStatus.status)
-	diag_msg.status.append(self.tempStatus.status)
-	self.diag_pub.publish(diag_msg)
+		# Publish diagnostics message
+		diag_msg = DiagnosticArray()
+		diag_msg.status.append(self.ecStatus.status)
+		diag_msg.status.append(self.orpStatus.status)
+		diag_msg.status.append(self.pHStatus.status)
+		diag_msg.status.append(self.doStatus.status)
+		diag_msg.status.append(self.tempStatus.status)
+		self.diag_pub.publish(diag_msg)
 
-	# Sleep
-	self.rate.sleep()
+		# Sleep
+		self.rate.sleep()
 
 if __name__ == "__main__":
 	node = Node()
