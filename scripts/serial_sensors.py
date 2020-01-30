@@ -4,8 +4,10 @@ from math import sqrt
 import rospy
 import rosparam
 import signal
+import socket
 import sys
 
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from atlas_ros.msg import Ph, Conductivity, DissolvedOxygen, Temperature, OxiRedoxPotential
 from atlas_ros.srv import CalibrateEC, CalibrateECResponse
 from atlas_ros.srv import CalibratePH, CalibratePHResponse
@@ -14,12 +16,34 @@ from sensor_msgs.msg import TimeReference
 
 from SerialExpander import SerialExpander
 
+
+
+class DiagStatus:
+	def __init__(self, name, hardware_id, **kwargs):
+		self.status = DiagnosticStatus()
+		self.status.level = DiagnosticStatus.OK
+		self.status.name = '%s/%s' % (hardware_id, name)
+		self.status.message = 'OK'
+		self.status.hardware_id = hardware_id
+		self.status.values = [KeyValue(key='Update Status', value='OK'),
+							  KeyValue(key='Time Since Update', value='N/A')]
+		self.last_update = 0
+
+	def check_stale(self, current_time, timeout):
+		elapsed = current_time.to_sec() - self.last_update.to_sec()
+		if elapsed > timeout:
+			self.status.level = DiagnosticStatus.STALE
+			self.status.message = 'Stale'
+			self.status.values = [KeyValue(key='Update Status', value='Stale'),
+							  	  KeyValue(key='Time Since Update', value=str(elapsed))]
+
 class Node:
 	def __init__(self, **kwargs):
 		self.expander = SerialExpander()
 
 		# Initialize ROS node
-		rospy.init_node('atlas_node', anonymous=True)
+		self.system_name = socket.gethostname()
+		rospy.init_node('%s_atlas_node' % self.system_name, anonymous=True)
 
 		# Get parameters
 		self.phTopic = self.get_param('/atlas/pH/topic', '/atlas/raw/pH')
@@ -59,24 +83,32 @@ class Node:
 		self.ph_calib_service = rospy.Service('calibrate_PH_sensor', CalibratePH, self.calibrate_PH_sensor)
 		self.do_calib_service = rospy.Service('calibrate_DO_sensor', CalibrateDO, self.calibrate_DO_sensor)
 
+		# Diagnostics
+		self.diag_pub = rospy.Publisher('/diagnostics', DiagnosticArray, queue_size=10)
+		self.pHStatus = DiagStatus('pH', self.system_name)
+		self.ecStatus = DiagStatus('Conductivity', self.system_name)
+		self.orpStatus = DiagStatus('Oxi-Redox Potential', self.system_name)
+		self.doStatus = DiagStatus('Dissolved Oxygen', self.system_name)
+		self.tempStatus = DiagStatus('Temperature', self.system_name)
+
 		# Message instances for sensors
 		self.pH_msg = Ph()
-		self.pH_msg.header.frame_id = 'atlaspi'
+		self.pH_msg.header.frame_id = '%s' % self.system_name
 		self.ec_msg = Conductivity()
-		self.ec_msg.header.frame_id = 'atlaspi'
+		self.ec_msg.header.frame_id = '%s' % self.system_name
 		self.do_msg = DissolvedOxygen()
-		self.do_msg.header.frame_id = 'atlaspi'
+		self.do_msg.header.frame_id = '%s' % self.system_name
 		self.temp_msg = Temperature()
-		self.temp_msg.header.frame_id = 'atlaspi'
+		self.temp_msg.header.frame_id = '%s' % self.system_name
 		self.orp_msg = OxiRedoxPotential()
-		self.orp_msg.header.frame_id = 'atlaspi'
-
-		# Send command to enable percent saturation in DO sensor
-		self.expander.send_cmd('O,%,1', self.do_address)
+		self.orp_msg.header.frame_id = '%s' % self.system_name
 
 		# Rate (defined by parameter)
 		hz = self.get_param('/atlas/rate', "10")
 		self.rate = rospy.Rate(int(hz))
+
+		# Send command to enable percent saturation in DO sensor
+		self.expander.send_cmd('O,%,1', self.do_address)
 
 	def handle_sigint(self, sig, frame):
 		"""
@@ -223,30 +255,66 @@ class Node:
 		self.ec_msg.salinity = float(data[2])
 		self.ec_msg.specificGrav = float(data[3])
 		self.ecPub.publish(self.ec_msg)
+		self.ecStatus.status.level = DiagnosticStatus.OK
+		self.ecStatus.status.message = 'OK'
+		self.ecStatus.status.values = [KeyValue(key='Conductivity', value=str(self.ec_msg.ec))]
+		self.ecStatus.last_update = rospy.Time.now()
 
 		# Get Redox Potential sensor data and publish it
 		self.orp_msg.header.stamp = rospy.Time.now()
 		self.orp_msg.orp = float(self.expander.get_data(self.orp_address).strip('\r'))
 		self.orpPub.publish(self.orp_msg)
+		self.orpStatus.status.level = DiagnosticStatus.OK
+		self.orpStatus.status.message = 'OK'
+		self.orpStatus.status.values = [KeyValue(key='Oxi-Redox Potential', value=str(self.orp_msg.orp))]
+		self.orpStatus.last_update = rospy.Time.now()
 
 		# Get ph sensor data and publish it
 		self.pH_msg.header.stamp = rospy.Time.now()
 		self.pH_msg.pH = float(self.expander.get_data(self.ph_address).strip('\r'))
 		self.phPub.publish(self.pH_msg)
+		self.pHStatus.status.level = DiagnosticStatus.OK
+		self.pHStatus.status.message = 'OK'
+		self.pHStatus.status.values = [KeyValue(key='pH', value=str(self.pH_msg.pH))]
+		self.pHStatus.last_update = rospy.Time.now()
 
 		# Get dissolved oxygen sensor data and publish it
 		self.do_msg.header.stamp = rospy.Time.now()
 		self.do_msg.do = float(self.expander.get_data(self.do_address).strip('\r'))
 		self.doPub.publish(self.do_msg)
+		self.doStatus.status.level = DiagnosticStatus.OK
+		self.doStatus.status.message = 'OK'
+		self.doStatus.status.values = [KeyValue(key='Dissolved Oxygen Saturation', value=str(self.do_msg.saturation))]
+		self.doStatus.last_update = rospy.Time.now()
 
 		# Get RTD sensor data and publish it
 		self.temp_msg.header.stamp = rospy.Time.now()
 		self.temp_msg.celsius = float(self.expander.get_data(self.temp_address).strip('\r'))
 		self.temp_msg.fahrenheit = self.temp_msg.celsius*1.8 + 32.0	# Conversion to Fahrenheit
 		self.tempPub.publish(self.temp_msg)
+		self.tempStatus.status.level = DiagnosticStatus.OK
+		self.tempStatus.status.message = 'OK'
+		self.tempStatus.status.values = [KeyValue(key='Temperature (deg C)', value=str(self.temp_msg.celsius))]
+		self.tempStatus.last_update = rospy.Time.now()
 
-		# Sleep
-		self.rate.sleep()
+	# Check for stale status
+	self.ecStatus.check_stale(rospy.Time.now(), 35)
+	self.orpStatus.check_stale(rospy.Time.now(), 35)
+	self.pHStatus.check_stale(rospy.Time.now(), 35)
+	self.doStatus.check_stale(rospy.Time.now(), 35)
+	self.tempStatus.check_stale(rospy.Time.now(), 35)
+
+	# Publish diagnostics message
+	diag_msg = DiagnosticArray()
+	diag_msg.status.append(self.ecStatus.status)
+	diag_msg.status.append(self.orpStatus.status)
+	diag_msg.status.append(self.pHStatus.status)
+	diag_msg.status.append(self.doStatus.status)
+	diag_msg.status.append(self.tempStatus.status)
+	self.diag_pub.publish(diag_msg)
+
+	# Sleep
+	self.rate.sleep()
 
 if __name__ == "__main__":
 	node = Node()
