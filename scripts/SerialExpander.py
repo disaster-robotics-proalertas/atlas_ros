@@ -128,7 +128,6 @@ class SerialExpander:
 		buf = cmd + "\r"     	# add carriage return
 		try:
 			self.ser.write(buf.encode('utf-8'))
-			time.sleep(1)			# Wait 1s for the data to arrive
 			return True
 		except SerialException as e:
 			print ("Error, ", e)
@@ -143,6 +142,7 @@ class SerialExpander:
 
 		# Send request for data
 		self.send_cmd("R", port)
+		time.sleep(1)
 		lines = self.read_lines()
 		
 		return lines[0]
