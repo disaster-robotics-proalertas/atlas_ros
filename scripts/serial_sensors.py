@@ -110,6 +110,8 @@ class Node:
 		# Send command to enable percent saturation in DO sensor
 		self.expander.send_cmd('O,%,1', self.do_address)
 
+		self.calib = False
+
 	def handle_sigint(self, sig, frame):
 		"""
 		Handles SIGINT signal (CTRL+C interruption)
