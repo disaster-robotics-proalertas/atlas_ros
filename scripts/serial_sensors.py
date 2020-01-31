@@ -68,7 +68,7 @@ class Node:
 		
 		# Connect to serial expander
 		rospy.loginfo("[atlas_node] Connecting to Serial Expander...")
-		expander.connect()
+		self.expander.connect()
 		rospy.loginfo("[atlas_node] Success")
 
 		# Topic info
@@ -301,7 +301,7 @@ class Node:
 
 
 	def run(self):
-		if self.calib:
+		if not self.calib:
 			# Get EC sensor data and publish it
 			self.ec_msg.header.stamp = rospy.Time.now()
 			data = self.expander.get_data(self.ec_address).strip('\r').split(',')
@@ -335,7 +335,9 @@ class Node:
 
 			# Get dissolved oxygen sensor data and publish it
 			self.do_msg.header.stamp = rospy.Time.now()
-			self.do_msg.do = float(self.expander.get_data(self.do_address).strip('\r'))
+			data = self.expander.get_data(self.do_address).strip('\r')
+			self.do_msg.do = float(data[0])
+			self.do_msg.saturation = float(data[1])
 			self.doPub.publish(self.do_msg)
 			self.doStatus.status.level = DiagnosticStatus.OK
 			self.doStatus.status.message = 'OK'
