@@ -189,10 +189,8 @@ include_directories(
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-install(FILES
-  launch/serial_sensors.launch
-  launch/i2c_sensors.launch
-#   # myfile2
+install(DIRECTORY
+  launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
